@@ -1,7 +1,18 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Timestamp, addDoc, collection, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from "firebase/firestore"
+import {
+  Timestamp,
+  addDoc,
+  collection,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
+} from "firebase/firestore"
 import { db } from "@/lib/firebase"
 
 export type Comment = {
@@ -22,8 +33,8 @@ export const useComments = (bookId?: string) => {
 
   useEffect(() => {
     if (!bookId) return
-    const commentsRef = collection(db, "writebook_books", bookId, "comments")
-    const q = query(commentsRef, orderBy("createdAt", "desc"))
+    const commentsRef = collection(db, "comments")
+    const q = query(commentsRef, where("bookId", "==", bookId), orderBy("createdAt", "desc"))
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setComments(
         snapshot.docs.map(
@@ -43,8 +54,9 @@ export const useComments = (bookId?: string) => {
 }
 
 export const createComment = async (bookId: string, data: Omit<Comment, "id" | "createdAt" | "updatedAt" | "edited">) => {
-  const commentsRef = collection(db, "writebook_books", bookId, "comments")
+  const commentsRef = collection(db, "comments")
   await addDoc(commentsRef, {
+    bookId,
     ...data,
     edited: false,
     deleted: false,
@@ -53,16 +65,16 @@ export const createComment = async (bookId: string, data: Omit<Comment, "id" | "
   })
 }
 
-export const updateComment = async (bookId: string, commentId: string, text: string) => {
-  await updateDoc(doc(db, "writebook_books", bookId, "comments", commentId), {
+export const updateComment = async (_bookId: string, commentId: string, text: string) => {
+  await updateDoc(doc(db, "comments", commentId), {
     text,
     edited: true,
     updatedAt: serverTimestamp(),
   })
 }
 
-export const deleteComment = async (bookId: string, commentId: string) => {
-  await updateDoc(doc(db, "writebook_books", bookId, "comments", commentId), {
+export const deleteComment = async (_bookId: string, commentId: string) => {
+  await updateDoc(doc(db, "comments", commentId), {
     deleted: true,
     text: "[deleted]",
     updatedAt: serverTimestamp(),

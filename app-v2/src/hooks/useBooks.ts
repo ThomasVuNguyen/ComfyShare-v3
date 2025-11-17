@@ -12,6 +12,7 @@ import {
   doc,
   getDocs,
   limit,
+  serverTimestamp,
 } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { generateSlug } from "@/lib/utils"
@@ -25,7 +26,7 @@ export const useBooks = (userId?: string) => {
 
   useEffect(() => {
     if (!userId) return
-    const booksRef = collection(db, "writebook_books")
+    const booksRef = collection(db, "books")
     const q = query(booksRef, where("createdBy", "==", userId), orderBy("createdAt", "desc"))
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -48,7 +49,7 @@ export const useBooks = (userId?: string) => {
 
 export const ensureUniqueSlug = async (title: string) => {
   const baseSlug = generateSlug(title)
-  const booksRef = collection(db, "writebook_books")
+  const booksRef = collection(db, "books")
   const existing = await getDocs(query(booksRef, where("slug", "==", baseSlug), limit(1)))
 
   if (existing.empty) return baseSlug
@@ -76,7 +77,7 @@ export const createBook = async ({
   createdBy: string
 }) => {
   const slug = await ensureUniqueSlug(title)
-  const booksRef = collection(db, "writebook_books")
+  const booksRef = collection(db, "books")
   const result = await addDoc(booksRef, {
     title,
     subtitle,
@@ -84,18 +85,20 @@ export const createBook = async ({
     createdBy,
     slug,
     published: false,
+    publishedAt: null,
     everyoneAccess: true,
     theme: "blue",
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    coverUrl: "",
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   })
 
   return result.id
 }
 
 export const updateBook = async (bookId: string, data: BookUpdateInput) => {
-  await updateDoc(doc(db, "writebook_books", bookId), {
+  await updateDoc(doc(db, "books", bookId), {
     ...data,
-    updatedAt: new Date(),
+    updatedAt: serverTimestamp(),
   })
 }

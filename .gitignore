@@ -1,2 +1,4 @@
 writebook/
 app-v2/node_modules/
+*/.env
+app-v2/.next/

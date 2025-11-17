@@ -4,11 +4,12 @@ export type BookTheme = "black" | "blue" | "green" | "magenta" | "orange" | "vio
 
 export type WritebookLeaf = {
   id: string
+  bookId: string
   title: string
-  type: "page" | "section" | "picture"
+  type: "page"
   body?: { content: string }
   position: number
-  slug: string
+  status: "active" | "trashed"
   createdAt?: Timestamp
   updatedAt?: Timestamp
 }

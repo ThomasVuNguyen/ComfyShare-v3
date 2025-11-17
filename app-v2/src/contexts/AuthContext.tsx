@@ -19,26 +19,23 @@ import {
   updateDoc,
 } from "firebase/firestore"
 
-export type WritebookRole = "member" | "administrator"
-
-export type WritebookUserProfile = {
+export type UserProfile = {
   userId: string
-  name: string
-  emailAddress: string
-  role: WritebookRole
+  displayName: string
+  email: string
   createdAt?: Date
   updatedAt?: Date
 }
 
 type AuthContextValue = {
   firebaseUser: User | null
-  profile: WritebookUserProfile | null
+  profile: UserProfile | null
   loading: boolean
   signOutUser: () => Promise<void>
   refreshProfile: () => Promise<void>
   updateProfileDetails: (input: {
-    name?: string
-    emailAddress?: string
+    displayName?: string
+    email?: string
     password?: string
   }) => Promise<void>
 }
@@ -47,35 +44,32 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<WritebookUserProfile | null>(null)
+  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
   const hydrateProfile = useCallback(async (user: User) => {
-    const profileRef = doc(collection(db, "writebook_users"), user.uid)
+    const profileRef = doc(collection(db, "users"), user.uid)
     const snap = await getDoc(profileRef)
 
     if (snap.exists()) {
       const data = snap.data()
       setProfile({
         userId: user.uid,
-        name: data.name,
-        emailAddress: data.emailAddress,
-        role: data.role ?? "member",
+        displayName: data.displayName,
+        email: data.email,
         createdAt: data.createdAt?.toDate?.(),
         updatedAt: data.updatedAt?.toDate?.(),
       })
     } else {
-      const defaultProfile: WritebookUserProfile = {
+      const defaultProfile: UserProfile = {
         userId: user.uid,
-        name: user.displayName || "Researcher",
-        emailAddress: user.email || "",
-        role: "member",
+        displayName: user.displayName || "User",
+        email: user.email || "",
       }
       await setDoc(profileRef, {
         ...defaultProfile,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        active: true,
       })
       setProfile(defaultProfile)
     }
@@ -107,16 +101,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [firebaseUser, hydrateProfile])
 
   const updateProfileDetails = useCallback<AuthContextValue["updateProfileDetails"]>(
-    async ({ name, emailAddress, password }) => {
+    async ({ displayName, email, password }) => {
       if (!firebaseUser) return
-      const profileRef = doc(collection(db, "writebook_users"), firebaseUser.uid)
+      const profileRef = doc(collection(db, "users"), firebaseUser.uid)
 
-      if (name && name !== profile?.name) {
-        await updateProfile(firebaseUser, { displayName: name })
+      if (displayName && displayName !== profile?.displayName) {
+        await updateProfile(firebaseUser, { displayName })
       }
 
-      if (emailAddress && emailAddress !== firebaseUser.email) {
-        await updateEmail(firebaseUser, emailAddress)
+      if (email && email !== firebaseUser.email) {
+        await updateEmail(firebaseUser, email)
       }
 
       if (password) {
@@ -124,14 +118,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       await updateDoc(profileRef, {
-        ...(name ? { name } : {}),
-        ...(emailAddress ? { emailAddress } : {}),
+        ...(displayName ? { displayName } : {}),
+        ...(email ? { email } : {}),
         updatedAt: serverTimestamp(),
       })
 
       await refreshProfile()
     },
-    [firebaseUser, profile?.name, refreshProfile],
+    [firebaseUser, profile?.displayName, refreshProfile],
   )
 
   const value = useMemo(
