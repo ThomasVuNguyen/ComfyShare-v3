@@ -1,0 +1,127 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user owns a resource
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Anyone can read user profiles (for displaying author names, etc.)
+      allow read: if true;
+
+      // Users can only create/update their own profile
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isOwner(userId);
+
+      // Users can delete their own profile
+      allow delete: if isOwner(userId);
+    }
+
+    // Books collection - all books are public by default
+    match /books/{bookId} {
+      // Anyone can read books (all are public)
+      allow read: if true;
+
+      // Authenticated users can create books
+      // Must set userId to their own uid
+      allow create: if isSignedIn() &&
+                       request.resource.data.userId == request.auth.uid;
+
+      // Only creator can update their book
+      allow update: if isOwner(resource.data.userId);
+
+      // Only creator can delete their book
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // Leaves collection
+    match /leaves/{leafId} {
+      // Anyone can read leaves (books are public)
+      allow read: if true;
+
+      // Only book owner can create/update/delete leaves
+      allow create: if isSignedIn() &&
+                       exists(/databases/$(database)/documents/books/$(request.resource.data.bookId)) &&
+                       get(/databases/$(database)/documents/books/$(request.resource.data.bookId)).data.userId == request.auth.uid;
+
+      allow update: if isSignedIn() &&
+                       exists(/databases/$(database)/documents/books/$(resource.data.bookId)) &&
+                       get(/databases/$(database)/documents/books/$(resource.data.bookId)).data.userId == request.auth.uid;
+
+      allow delete: if isSignedIn() &&
+                       exists(/databases/$(database)/documents/books/$(resource.data.bookId)) &&
+                       get(/databases/$(database)/documents/books/$(resource.data.bookId)).data.userId == request.auth.uid;
+    }
+
+    // Pages collection
+    match /pages/{pageId} {
+      // Anyone can read pages
+      allow read: if true;
+
+      // Authenticated users can create pages
+      allow create: if isSignedIn();
+
+      // Authenticated users can update/delete pages
+      // (ownership is enforced through leaves)
+      allow update, delete: if isSignedIn();
+    }
+
+    // Sections collection
+    match /sections/{sectionId} {
+      // Anyone can read sections
+      allow read: if true;
+
+      // Authenticated users can create sections
+      allow create: if isSignedIn();
+
+      // Authenticated users can update/delete sections
+      allow update, delete: if isSignedIn();
+    }
+
+    // Pictures collection
+    match /pictures/{pictureId} {
+      // Anyone can read pictures
+      allow read: if true;
+
+      // Authenticated users can create pictures
+      allow create: if isSignedIn();
+
+      // Authenticated users can update/delete pictures
+      allow update, delete: if isSignedIn();
+    }
+
+    // Comments collection
+    match /comments/{commentId} {
+      // Anyone can read comments
+      allow read: if true;
+
+      // Authenticated users can create comments
+      // Must set userId to their own uid
+      allow create: if isSignedIn() &&
+                       request.resource.data.userId == request.auth.uid;
+
+      // Users can update/delete their own comments
+      allow update, delete: if isOwner(resource.data.userId);
+    }
+
+    // Edits collection (version history)
+    match /edits/{editId} {
+      // Anyone can read edit history
+      allow read: if true;
+
+      // Authenticated users can create edits
+      allow create: if isSignedIn();
+
+      // No updates or deletes allowed (immutable history)
+      allow update, delete: if false;
+    }
+  }
+}

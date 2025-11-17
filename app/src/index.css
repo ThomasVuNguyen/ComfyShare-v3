@@ -1,37 +1,60 @@
-/* Writebook Design System - Exact Copy */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* Reset & Base */
-@import './styles/_reset.css';
-@import './styles/colors.css';
-@import './styles/base.css';
-@import './styles/text.css';
+@layer base {
+  :root {
+    --background: #ffffff;
+    --foreground: #0a0a0a;
+  }
 
-/* Layout */
-@import './styles/layout.css';
-@import './styles/utilities.css';
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --background: #0a0a0a;
+      --foreground: #ededed;
+    }
+  }
 
-/* Components */
-@import './styles/buttons.css';
-@import './styles/inputs.css';
-@import './styles/breadcrumbs.css';
-@import './styles/sidebar.css';
-@import './styles/panels.css';
-@import './styles/dialog.css';
-@import './styles/lightbox.css';
-@import './styles/popover.css';
+  body {
+    color: var(--foreground);
+    background: var(--background);
+    font-family: system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
 
-/* Features */
-@import './styles/books.css';
-@import './styles/library.css';
-@import './styles/pages.css';
-@import './styles/toc.css';
-@import './styles/house.css';
-@import './styles/search.css';
-@import './styles/arrangement.css';
-@import './styles/translations.css';
-@import './styles/qr-code.css';
-@import './styles/product.css';
+/* Prose styles for markdown */
+@layer components {
+  .prose {
+    @apply max-w-none;
+  }
 
-/* Extras */
-@import './styles/syntax.css';
-@import './styles/animation.css';
+  .prose h2 {
+    @apply mb-4 mt-8 text-2xl font-semibold text-neutral-800;
+  }
+
+  .prose p {
+    @apply mb-4 leading-relaxed text-neutral-700;
+  }
+
+  .prose pre {
+    @apply mb-4 overflow-x-auto rounded-2xl border border-neutral-200 bg-neutral-50 p-4;
+  }
+
+  .prose code {
+    @apply rounded bg-neutral-100 px-1.5 py-0.5 text-sm font-mono;
+  }
+
+  .prose ul, .prose ol {
+    @apply mb-4 ml-6 list-disc space-y-2 text-neutral-700;
+  }
+
+  .prose a {
+    @apply text-blue-600 underline hover:text-blue-800;
+  }
+
+  .prose blockquote {
+    @apply border-l-4 border-neutral-300 pl-4 italic text-neutral-600;
+  }
+}
