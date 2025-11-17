@@ -12,25 +12,10 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Helper function to get book data
-    function getBook(bookId) {
-      return get(/databases/$(database)/documents/writebook_books/$(bookId)).data;
-    }
-
-    // Helper function to check if book is published
-    function isBookPublished(bookId) {
-      return getBook(bookId).published == true;
-    }
-
-    // Helper function to check if user is book creator
-    function isBookCreator(bookId) {
-      return isSignedIn() && request.auth.uid == getBook(bookId).createdBy;
-    }
-
-    // User profiles
-    match /writebook_users/{userId} {
-      // Anyone can read user profiles (for displaying author names)
-      allow read: if isSignedIn();
+    // Users collection
+    match /users/{userId} {
+      // Anyone can read user profiles (for displaying author names, etc.)
+      allow read: if true;
 
       // Users can only create/update their own profile
       allow create: if isSignedIn() && request.auth.uid == userId;
@@ -40,53 +25,103 @@ service cloud.firestore {
       allow delete: if isOwner(userId);
     }
 
-    // Books (papers)
-    match /writebook_books/{bookId} {
-      // Anyone can read published books
-      // Only the creator can read their own drafts
-      allow read: if resource.data.published == true || isOwner(resource.data.createdBy);
+    // Books collection - all books are public by default
+    match /books/{bookId} {
+      // Anyone can read books (all are public)
+      allow read: if true;
 
       // Authenticated users can create books
-      // Must set createdBy to their own uid
+      // Must set userId to their own uid
       allow create: if isSignedIn() &&
-                       request.resource.data.createdBy == request.auth.uid;
+                       request.resource.data.userId == request.auth.uid;
 
       // Only creator can update their book
-      // Cannot change createdBy field
-      allow update: if isOwner(resource.data.createdBy) &&
-                       request.resource.data.createdBy == resource.data.createdBy;
+      allow update: if isOwner(resource.data.userId);
 
       // Only creator can delete their book
-      allow delete: if isOwner(resource.data.createdBy);
+      allow delete: if isOwner(resource.data.userId);
+    }
 
-      // Leaves (pages/sections) subcollection
-      match /leaves/{leafId} {
-        // Anyone can read leaves of published books
-        // Only creator can read leaves of draft books
-        allow read: if isBookPublished(bookId) || isBookCreator(bookId);
+    // Leaves collection
+    match /leaves/{leafId} {
+      // Anyone can read leaves (books are public)
+      allow read: if true;
 
-        // Only book creator can write leaves
-        allow write: if isBookCreator(bookId);
-      }
+      // Only book owner can create/update/delete leaves
+      allow create: if isSignedIn() &&
+                       exists(/databases/$(database)/documents/books/$(request.resource.data.bookId)) &&
+                       get(/databases/$(database)/documents/books/$(request.resource.data.bookId)).data.userId == request.auth.uid;
 
-      // Comments subcollection
-      match /comments/{commentId} {
-        // Anyone can read comments on published books
-        allow read: if isBookPublished(bookId);
+      allow update: if isSignedIn() &&
+                       exists(/databases/$(database)/documents/books/$(resource.data.bookId)) &&
+                       get(/databases/$(database)/documents/books/$(resource.data.bookId)).data.userId == request.auth.uid;
 
-        // Authenticated users can create comments
-        // Must set userId to their own uid
-        allow create: if isSignedIn() &&
-                         request.resource.data.userId == request.auth.uid;
+      allow delete: if isSignedIn() &&
+                       exists(/databases/$(database)/documents/books/$(resource.data.bookId)) &&
+                       get(/databases/$(database)/documents/books/$(resource.data.bookId)).data.userId == request.auth.uid;
+    }
 
-        // Users can update/delete their own comments
-        // OR book creator can delete any comment on their book
-        allow update: if isSignedIn() &&
-                         (isOwner(resource.data.userId) || isBookCreator(bookId));
+    // Pages collection
+    match /pages/{pageId} {
+      // Anyone can read pages
+      allow read: if true;
 
-        allow delete: if isSignedIn() &&
-                         (isOwner(resource.data.userId) || isBookCreator(bookId));
-      }
+      // Authenticated users can create pages
+      allow create: if isSignedIn();
+
+      // Authenticated users can update/delete pages
+      // (ownership is enforced through leaves)
+      allow update, delete: if isSignedIn();
+    }
+
+    // Sections collection
+    match /sections/{sectionId} {
+      // Anyone can read sections
+      allow read: if true;
+
+      // Authenticated users can create sections
+      allow create: if isSignedIn();
+
+      // Authenticated users can update/delete sections
+      allow update, delete: if isSignedIn();
+    }
+
+    // Pictures collection
+    match /pictures/{pictureId} {
+      // Anyone can read pictures
+      allow read: if true;
+
+      // Authenticated users can create pictures
+      allow create: if isSignedIn();
+
+      // Authenticated users can update/delete pictures
+      allow update, delete: if isSignedIn();
+    }
+
+    // Comments collection
+    match /comments/{commentId} {
+      // Anyone can read comments
+      allow read: if true;
+
+      // Authenticated users can create comments
+      // Must set userId to their own uid
+      allow create: if isSignedIn() &&
+                       request.resource.data.userId == request.auth.uid;
+
+      // Users can update/delete their own comments
+      allow update, delete: if isOwner(resource.data.userId);
+    }
+
+    // Edits collection (version history)
+    match /edits/{editId} {
+      // Anyone can read edit history
+      allow read: if true;
+
+      // Authenticated users can create edits
+      allow create: if isSignedIn();
+
+      // No updates or deletes allowed (immutable history)
+      allow update, delete: if false;
     }
   }
 }
